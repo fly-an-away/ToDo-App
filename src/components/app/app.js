@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import React, { Component } from 'react'
+import PropTypes from 'prop-types'
 
 import TaskList from '../task-list'
 import Footer from '../footer'
@@ -6,15 +7,40 @@ import NewTaskForm from '../new-task-form'
 
 import './app.css'
 
-const App = () => {
-  const [tasksData, setTasksData] = useState([])
-  const [filter, setFilter] = useState('all')
-  const [taskId, setTaskId] = useState(1)
+export default class App extends Component {
+  maxId = 100
 
-  const createTodoItem = (label, minValue = 0, secValue = 0) => {
+  state = {
+    tasksData: [],
+    filter: 'all',
+  }
+
+  static defaultProps = {
+    tasksData: [
+      {
+        id: 10,
+        description: 'Получить список задач',
+        created: new Date(),
+        done: false,
+        isChange: false,
+        minValue: 0,
+        secValue: 0,
+      },
+    ],
+    filter: 'all',
+  }
+
+  static propTypes = {
+    // eslint-disable-next-line react/no-unused-prop-types
+    filter: PropTypes.string,
+    // eslint-disable-next-line react/no-unused-prop-types
+    tasksData: PropTypes.instanceOf(Array),
+  }
+
+  // eslint-disable-next-line react/sort-comp
+  createTodoItem(label, minValue = 0, secValue = 0) {
     const trimDescription = label.replace(/ +/g, ' ').trim()
     // todo добавить проверку на число
-
     let minValueNumber = +minValue
     let secValueNumber = +secValue
     if (secValueNumber > 60) {
@@ -25,41 +51,55 @@ const App = () => {
       description: trimDescription,
       created: new Date(),
       done: false,
-      id: taskId,
+      // eslint-disable-next-line no-plusplus
+      id: this.maxId++,
       isChange: false,
       minValue: minValueNumber,
       secValue: secValueNumber,
     }
   }
 
-  const editingItem = (id) => {
-    const newtasksData = tasksData.map((el) => {
-      if (el.id === id) {
-        return {
-          ...el,
-          isChange: true,
+  editingItem = (id) => {
+    this.setState(({ tasksData }) => {
+      const newtasksData = tasksData.map((el) => {
+        if (el.id === id) {
+          return {
+            ...el,
+            isChange: true,
+          }
         }
+        return el
+      })
+      return {
+        tasksData: newtasksData,
       }
-      return el
     })
-
-    setTasksData(newtasksData)
   }
 
-  const deleteItem = (id) => {
-    const idx = tasksData.findIndex((el) => el.id === id)
-    const newArray = [...tasksData.slice(0, idx), ...tasksData.slice(idx + 1)]
-    setTasksData(newArray)
+  deleteItem = (id) => {
+    this.setState(({ tasksData }) => {
+      const idx = tasksData.findIndex((el) => el.id === id)
+
+      const newArray = [...tasksData.slice(0, idx), ...tasksData.slice(idx + 1)]
+
+      return {
+        tasksData: newArray,
+      }
+    })
   }
 
-  const addItem = (text, minValue = 12, secValue = 45) => {
-    const newItem = createTodoItem(text, minValue, secValue)
-    const newArray = [...tasksData, newItem]
-    setTaskId(taskId + 1)
-    setTasksData(newArray)
+  addItem = (text, minValue = 12, secValue = 45) => {
+    const newItem = this.createTodoItem(text, minValue, secValue)
+    this.setState(({ tasksData }) => {
+      const newArray = [...tasksData, newItem]
+
+      return {
+        tasksData: newArray,
+      }
+    })
   }
 
-  const toggleProperty = (arr, id, propName) => {
+  toggleProperty(arr, id, propName) {
     const idx = arr.findIndex((el) => el.id === id)
     const oldItem = arr[idx]
     const newItem = { ...oldItem, [propName]: !oldItem[propName] }
@@ -67,38 +107,50 @@ const App = () => {
     return [...arr.slice(0, idx), newItem, ...arr.slice(idx + 1)]
   }
 
-  const onToggleImportant = (id) => {
-    setTasksData(toggleProperty(tasksData, id, 'isChange'))
+  onToggleImportant = (id) => {
+    this.setState(({ tasksData }) => ({
+      tasksData: this.toggleProperty(tasksData, id, 'isChange'),
+    }))
   }
 
-  const onToggleDone = (id) => {
-    setTasksData(toggleProperty(tasksData, id, 'done'))
+  onToggleDone = (id) => {
+    this.setState(({ tasksData }) => ({
+      tasksData: this.toggleProperty(tasksData, id, 'done'),
+    }))
   }
 
-  const onDeleteDone = () => {
-    const newArray = tasksData.filter((task) => !task.done)
-    setTasksData(newArray)
-  }
-
-  const changeDescription = (id, neWdescription) => {
-    const newTasksData = tasksData.map((el) => {
-      if (el.id === id) {
-        return {
-          ...el,
-          description: neWdescription,
-          isChange: false,
-        }
+  onDeleteDone = () => {
+    this.setState(({ tasksData }) => {
+      const newArray = tasksData.filter((task) => !task.done)
+      return {
+        tasksData: newArray,
       }
-      return el
     })
-    setTasksData(newTasksData)
   }
 
-  const onFilterChange = (filterBtn) => {
-    setFilter(filterBtn)
+  changeDescription = (id, neWdescription) => {
+    this.setState(({ tasksData }) => {
+      const newTasksData = tasksData.map((el) => {
+        if (el.id === id) {
+          return {
+            ...el,
+            description: neWdescription,
+            isChange: false,
+          }
+        }
+        return el
+      })
+      return {
+        tasksData: newTasksData,
+      }
+    })
   }
 
-  const showFilter = (items, filter) => {
+  onFilterChange = (filter) => {
+    this.setState({ filter })
+  }
+
+  filter = (items, filter) => {
     switch (filter) {
       case 'all':
         return items
@@ -111,36 +163,41 @@ const App = () => {
     }
   }
 
-  let doneCount = tasksData.filter((el) => el.done).length
-  let todoCount = tasksData.length - doneCount
+  render() {
+    const { tasksData, filter } = this.state
 
-  return (
-    <div>
-      <section className="todoapp">
-        <header className="header">
-          <h1>todos</h1>
-          <NewTaskForm onAdded={addItem} />
-        </header>
-        <section className="main">
-          <TaskList
-            tasksData={showFilter(tasksData, filter)}
-            onDeleted={deleteItem}
-            onToggleImportant={onToggleImportant}
-            onToggleDone={onToggleDone}
-            onEditClick={editingItem}
-            onChangeDescription={changeDescription}
-          />
-          <Footer
-            tasksData={tasksData}
-            todoCount={todoCount}
-            onDeleteDone={onDeleteDone}
-            onFilterChange={onFilterChange}
-            filter={filter}
-          />
+    const visibleItems = this.filter(tasksData, filter)
+
+    const doneCount = tasksData.filter((el) => el.done).length
+
+    const todoCount = tasksData.length - doneCount
+
+    return (
+      <div>
+        <section className="todoapp">
+          <header className="header">
+            <h1>todos</h1>
+            <NewTaskForm onAdded={this.addItem} />
+          </header>
+          <section className="main">
+            <TaskList
+              tasksData={visibleItems}
+              onDeleted={this.deleteItem}
+              onToggleImportant={this.onToggleImportant}
+              onToggleDone={this.onToggleDone}
+              onEditClick={this.editingItem}
+              onChangeDescription={this.changeDescription}
+            />
+            <Footer
+              tasksData={this.state.tasksData}
+              todoCount={todoCount}
+              onDeleteDone={this.onDeleteDone}
+              onFilterChange={this.onFilterChange}
+              filter={filter}
+            />
+          </section>
         </section>
-      </section>
-    </div>
-  )
+      </div>
+    )
+  }
 }
-
-export default App
